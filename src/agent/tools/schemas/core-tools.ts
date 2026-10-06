@@ -118,6 +118,7 @@ export const CORE_TOOL_SCHEMAS: AgentToolSchema[] = [
       'After success, place with edit_item adds:[{type:"motion-graphic", assetId, trackId?, fromFrame?}].',
       'Prefer library templates (browse_library / add_motion_graphic) when one fits; use this only for brand-new visuals.',
       'Call only when the user clearly asked for a new MG.',
+      'IMPORTANT: width and height MUST match the active timeline canvas (read_timeline reports width/height). Never use the defaults — a 9:16 vertical timeline needs width=1080 height=1920, a 16:9 timeline needs width=1920 height=1080. Wrong dimensions cause the MG to be cropped or pillarboxed.',
     ].join(' '),
     input_schema: {
       type: 'object',
@@ -127,16 +128,16 @@ export const CORE_TOOL_SCHEMAS: AgentToolSchema[] = [
         name: { type: 'string', description: 'Short media-pool display name.' },
         durationSeconds: { type: 'number', minimum: 0.5, maximum: 600, description: 'Duration in seconds (default 3).' },
         durationInFrames: { type: 'number', minimum: 15, maximum: 36000, description: 'Duration in frames (overrides durationSeconds when set).' },
-        width: { type: 'number', minimum: 16, maximum: 8192, description: 'Natural width px (default 1920).' },
-        height: { type: 'number', minimum: 16, maximum: 8192, description: 'Natural height px (default 1080).' },
+        width: { type: 'number', minimum: 16, maximum: 8192, description: 'Canvas width px — MUST match the active timeline width from read_timeline (e.g. 1080 for 9:16, 1920 for 16:9). No default is safe; always pass this explicitly.' },
+        height: { type: 'number', minimum: 16, maximum: 8192, description: 'Canvas height px — MUST match the active timeline height from read_timeline (e.g. 1920 for 9:16, 1080 for 16:9). No default is safe; always pass this explicitly.' },
       },
-      required: ['name'],
+      required: ['name', 'width', 'height'],
     },
   },
   {
     // Legacy alias kept for older prompts/skills; same executor as submit_motion_graphic.
     name: 'create_motion_graphic',
-    description: 'Alias of submit_motion_graphic (pool-only MG generation). Prefer submit_motion_graphic. Does not place on the timeline — use edit_item after.',
+    description: 'Alias of submit_motion_graphic (pool-only MG generation). Prefer submit_motion_graphic. Does not place on the timeline — use edit_item after. width and height MUST match the active timeline canvas from read_timeline.',
     input_schema: {
       type: 'object',
       properties: {
@@ -145,10 +146,10 @@ export const CORE_TOOL_SCHEMAS: AgentToolSchema[] = [
         name: { type: 'string', description: 'Short display name.' },
         durationSeconds: { type: 'number', minimum: 0.5, maximum: 600, description: 'Duration in seconds (default 3).' },
         durationInFrames: { type: 'number', minimum: 15, maximum: 36000 },
-        width: { type: 'number', minimum: 16, maximum: 8192 },
-        height: { type: 'number', minimum: 16, maximum: 8192 },
+        width: { type: 'number', minimum: 16, maximum: 8192, description: 'Canvas width px from read_timeline (e.g. 1080 for 9:16).' },
+        height: { type: 'number', minimum: 16, maximum: 8192, description: 'Canvas height px from read_timeline (e.g. 1920 for 9:16).' },
       },
-      required: ['name'],
+      required: ['name', 'width', 'height'],
     },
   },
   {
