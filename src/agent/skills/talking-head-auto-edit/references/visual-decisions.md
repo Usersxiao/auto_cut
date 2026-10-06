@@ -76,28 +76,43 @@
 
 ---
 
-## 5. 具体事物/场景 → 配图（Unsplash 或 GPT 生图）
+## 5. 配图（Unsplash 或 GPT 生图）——主动触发，不等讲话"明确提到"
 
-**什么时候用**：讲话提到具体的产品、地点、工具、概念
+**配图是必须完成的任务，不是可选项。** 每段视频至少 3 张配图，且每隔约 8–10 秒就应当有一张出现。
+
+**主动配图时机**（不需要等到讲话明确提及才触发）：
+- 讲话中出现任何名词（产品、工具、地方、概念、行业、人物）→ 立即触发
+- 已经过了 8 秒没有配图出现 → 主动找一张与当前话题相关的图补上
+- 开场 5 秒内 → 必须有一张图建立视觉基调
 
 **决策逻辑**：
-- 真实照片类（城市、产品、人物、自然）→ `search_photos`（Unsplash）
-- 需要定制化图（UI 截图、示意图、品牌图、图表）→ `submit_image`（GPT 生图）
+- 真实照片类（城市、产品、人物、自然、职场）→ `search_photos`（Unsplash）
+- 需要定制化图（示意图、图表、流程图）→ `submit_image`（GPT 生图）
 
-**search_photos 关键词原则**：
-- 直接用讲话里提到的名词，不要泛化
-- 讲"北京的写字楼" → 搜 "Beijing office building"
-- 讲"AI 算法" → 搜 "neural network visualization" 或 "data science"
+**search_photos 关键词规则**：
+- 中文关键词必须翻译成英文才能搜索
+- 关键词要具体，不要泛化：讲"职场竞争" → 搜 "business competition" 而非 "work"
+- 讲"AI 算法" → 搜 "neural network" 或 "machine learning visualization"
+- 讲"创业" → 搜 "startup office" 或 "entrepreneur"
 
 **submit_image prompt 写法**：
 ```
-[描述内容]，干净的背景，适合作为视频配图，
-16:9 比例，高清，商业插画风格 / 照片写实风格
+[描述内容]，简洁干净的背景，适合作为竖屏视频配图，
+9:16 比例，高清，现代商业风格
 ```
 
-**放置方式（PiP）**：
-- 图片作为 B-roll 配图，放 V1 替换掉该片段；或
-- 以画中画形式放在演讲者右侧，`transform.scale=0.45`，`transform.x=0.27`（右侧居中）
+**放置方式**（二选一，根据图片内容决定）：
+
+方式 A：小卡片覆盖（演讲者仍然可见）
+- `edit_item` adds type=image，track=V3
+- `transform.scale=0.42`，`transform.x=0.27`，`transform.y=-0.25`（右上角）
+- `fadeInSeconds=0.3`，`fadeOutSeconds=0.3`
+
+方式 B：B-roll 全覆盖（演讲者视频暂时被图片替换）
+- `edit_item` adds type=image，track=V1，覆盖对应时间段
+- 仅在该段讲话内容与图片强相关时使用（例如演讲者说"来看这张图"）
+
+**字幕安全区**：配图放置时 `transform.y` 必须保证图片底边不超过 +0.3（即画面底部 20% 留给字幕）。
 
 ---
 

@@ -62,101 +62,141 @@ view_timeline_frames → 在关键时刻截帧，了解画面内容（演讲者�
 
 - **密度**：平均每 5–8 秒一个效果，开头 15 秒可以密一些（提升留存）
 - **分层**：大字动效放 V2 轨道，MG 卡片放 V3，配图/B-roll 放 V4 或替换 V1 片段
-- **不遮挡**：截帧确认演讲者脸和手的位置，MG 放置不覆盖脸部、手部、字幕区域
+- **不遮挡**：截帧确认演讲者脸和手的位置，MG 放置绝对不能覆盖脸部、手部、**字幕安全区**
 - **效果不重复**：连续两个效果不使用同一种形式（例如两张数字卡），穿插不同类型
+- **配图必须使用**：每段视频至少要有 3 张来自 Unsplash 或 GPT 生图的配图，不允许只有 MG 文字动效
+
+### 字幕安全区（所有 MG 必须遵守）
+
+竖屏（9:16）视频字幕固定在底部居中，占据画面底部约 20% 的区域。所有叠加效果的 `y` 坐标必须保证效果的底边不超过画面高度的 80%（即从顶部算 80% 以上）。
+
+```
+可安全放置 MG 的区域：
+  - 画面顶部 0–75%（演讲者脸上方）
+  - 画面左侧 / 右侧条状区域（不覆盖脸）
+
+绝对禁止区域：
+  - 底部 20%（字幕区）
+  - 演讲者脸部中心 ±100px 范围
+```
 
 在开始生成之前，把方案用简洁文字列给用户确认（仅在不是完全自动运行时）：
-> "我计划在 0:03 加标题大字，0:12 加数字卡片，0:28 加列表条…方向对吗？"
+> "我计划在 0:03 加标题大字，0:12 加数字卡片，0:28 加列表条，0:45 加 Unsplash 配图…方向对吗？"
 
 ---
 
-## 第四步：效果生成与放置
+## 第四步：A-roll 先行（必须）
+
+**在放任何 MG 或配图之前，必须先完成 A-roll 处理。** A-roll 的时间线决定了所有后续效果的帧位置；跳过这步会导致效果和讲话错位。
+
+```
+transcribe_track  → 转录主视频得到逐词时间戳
+clean_script      → 压缩明显的停顿（>0.8s 压到 0.3s），去除 um/uh/呃/额
+```
+
+A-roll 处理完毕后，用 `read_timeline` 重新读取时间线，获取最终的帧时间戳，再进入第五步。
+
+---
+
+## 第五步：效果生成与放置
 
 按决策表逐项执行，参考 references/visual-decisions.md 的生成规则。
 
-### 关键原则
+### MG 生成原则
 
 **每个效果都基于内容生成，不是套模板。**
 
-使用 `submit_motion_graphic` 时，prompt 必须包含实际内容——把讲话里的关键词、数字、主题写进去。不要用"a motion graphic with text"这种通用描述。
+`submit_motion_graphic` 的 prompt 必须包含实际内容——把讲话里的关键词、数字、主题写进去。
 
 ```
-好的 prompt 示例：
-  "大字动效：白色粗体 '每天复利1%' 从左向右扫光揭示，深色背景，用于强调这句核心论点，3秒"
+✅ 好的 prompt：
+  "大字动效：白色粗体 '每天复利1%' 从左向右扫光揭示，深色背景，强调核心论点，3秒"
 
-坏的 prompt 示例：
+❌ 坏的 prompt：
   "a text animation motion graphic"
 ```
 
-### 图片/配图决策
+### 配图（B-roll）——强制执行，不可省略
 
-当触发类型是"提到具体事物/场景/产品"时：
-1. 优先用 `search_photos`（Unsplash）搜索相关图片，关键词来自讲话内容
-2. 如果需要定制化（品牌图、图表、示意图），用 `submit_image`（GPT 生图）
-3. 以 PiP 形式放在画面一侧（演讲者在左/右，配图在对侧）
+**每段视频必须至少包含 3 张配图**，不允许只有 MG 文字动效。配图让视频有视觉呼吸，是案例视频视觉效果的核心。
 
-### 全屏切出
+配图触发时机（不需要等到讲话"明确提到"才用）：
+- 讲话中出现任何名词（产品、工具、地方、概念、人物）→ 搜索对应的 Unsplash 图片
+- 每隔约 8–10 秒，如果还没有配图出现，主动找一张与当前话题相关的图片补上
+- 开场 5 秒内必须有一张图建立视觉基调
 
-当触发类型是"展示截图/网页/演示"且用户提供了屏录素材时：
-- 把屏录片段放 V1，演讲者视频做圆形 PiP 叠加（用 `edit_item` 设置 `transform.borderRadius` + `transform.scale` + `transform.x/y`，把演讲者缩到约 25% 大小放左下角）
-- 演讲者 PiP 加黄色/金色边框（用 MG 叠加或 `filters.borderRadius`）
+操作步骤：
+1. 用 `search_photos` 搜索，关键词直接取讲话里的名词（中文关键词转成英文搜索）
+2. 找到图片后用 `edit_item` adds 把图片以 B-roll 形式放入 V2 轨道，覆盖对应时间段
+3. 或用 `edit_item` updates 设置 `transform.scale=0.45`，让图片以小卡片形式出现在画面右上角（`transform.x=0.27, transform.y=-0.3`），演讲者仍然可见
 
-### 大字动效（关键词揭示）
+当 Unsplash 找不到合适图时，用 `submit_image` 生成定制图（图表、示意图、品牌图）。
 
-当触发类型是"核心论点/关键词"时：
-- 用 `submit_motion_graphic` 生成关键词大字揭示动效
-- 放在演讲者画面上方，避开脸部区域
-- 时长约 2–3 秒，与讲话高度对齐
+### MG 放置的字幕安全区（强制）
+
+竖屏视频字幕占据底部 20% 区域。所有 MG 效果放置时：
+- `transform.y` 保证效果底边不超过 +0.3（从画面中心往下 30%，即留出底部 20% 给字幕）
+- 简单记忆：效果只放画面的上 80%
+
+### 大字动效
+
+核心论点/关键词时：放画面顶部区域（`transform.y = -0.35` 左右），时长 2–3 秒。
 
 ### 数字/统计卡片
 
-当触发类型是"数字/统计/百分比"时：
-- 用 `submit_motion_graphic` 生成包含实际数字的卡片动效
-- 放在演讲者对侧（演讲者在左则卡片在右）
-- 时长与讲话数字相关的句子对齐
+出现数字/百分比时：放右侧（`transform.x = 0.25`），不超过画面底部 80%。
 
 ### 信息列表条
 
-当触发类型是"列表项/步骤"时：
-- 为每一项生成一个列表条 MG，随讲话依次出现
-- 或者生成整张列表卡，在这个话题段全程显示
+出现"第一/第二/首先/然后"时：每项一个列表条 MG，随讲话依次出现在左侧或右侧。
 
 ---
 
-## 第五步：字幕
+## 第六步：字幕（强制固定格式）
+
+字幕必须按以下顺序执行，不允许跳过任何一步：
 
 ```
 edit_captions action=enable
-edit_captions action=template templatePreset=netflix     （中文内容）
-edit_captions action=layout json={"preset":"bottom-center"}
+edit_captions action=template templatePreset=netflix
+edit_captions action=style json={"textAlign":"center"}
+edit_captions action=layout json={"preset":"bottom-center","offsetYRatio":0}
 ```
 
-英文内容用 `studio` 或 `submagic` 模板。
+**严禁之后再调字幕位置**——字幕一旦设置好就不要动，MG 效果需要绕开字幕区，而不是让字幕去适应 MG。
+
+英文内容用 `studio` 模板替代 `netflix`，其余步骤相同。
 
 ---
 
-## 第六步：背景音乐
+## 第七步：背景音乐
 
-在效果全部放置完毕后再处理 BGM，避免 BGM 时长与视频不一致。
+所有效果和字幕放置完毕后才处理 BGM。
 
-- 从 `list_audio` 里选匹配内容情绪的曲目
-- 用 `edit_track` 设置 music track `role=follower`，主视频轨 `role=anchor`，启用自动闪避
-- BGM 音量低于主讲声 15-20dB，讲话时自动闪避
-- 淡入 1-2 秒，淡出 2-3 秒
+```
+list_audio                    → 选匹配内容情绪的曲目（商务/知识类选轻快但不躁动的）
+add_audio                     → 放入 A2 轨道，startFrame=0
+edit_track (music track)      → role=follower，fadeIn=1.5，fadeOut=2.5
+edit_track (speech track)     → role=anchor
+```
+
+BGM clip 的 `durationInFrames` 必须等于主视频时长，不允许超出。
 
 ---
 
-## 第七步：QA 核查
+## 第八步：QA 核查（强制）
 
-```
-view_timeline_frames  → 在每个 MG 放置的帧截图，核查：
-```
-- MG 没有遮挡演讲者的脸和手
-- 字幕区域（底部 15%）没有被其他内容覆盖
-- 效果时机与讲话内容一致（不超前也不滞后）
-- 相邻效果形式有变化（不单调）
+**这步不可省略。** 用 `view_timeline_frames` 在以下帧截图并逐一确认：
 
-发现问题：用 `set_item_timing` / `move_item` / `edit_item` 修正，无需重新生成。
+检查清单：
+- 每个 MG 效果的帧：没有遮挡演讲者的脸和手
+- 字幕区域（底部 20%）没有任何 MG 内容压入
+- 字幕对齐是居中（`textAlign: center`），不是左对齐
+- 相邻两个效果形式不同（不连续出现两张相同类型的卡片）
+- 配图（B-roll）至少出现了 3 次
+
+发现任何遮挡或错位：用 `edit_item` 的 `transform.y` 调整，无需重新生成 MG。
+发现字幕左对齐：重新执行 `edit_captions action=style json={"textAlign":"center"}` 和 `edit_captions action=layout json={"preset":"bottom-center"}`。
 
 ---
 
