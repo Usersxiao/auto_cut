@@ -147,6 +147,24 @@ export const CREATIVE_SKILL_METADATA: CreativeSkillMetadata[] = [
     ]
   },
   {
+    id: '11111111-1240-4000-8000-000000000016',
+    slug: 'talking-head-auto-edit',
+    name: 'Talking Head Auto Edit',
+    nameZh: '口播视频全自动增强',
+    summary: '给一段口播/讲解/访谈视频，自动转录、分析内容，根据讲话内容动态决定在每个关键时刻添加什么视觉效果：大字动效、MG 动画、信息卡片、B-roll 配图、字幕、背景音乐。',
+    scenarios: [
+      'talking-head-auto-edit',
+      'auto-edit',
+      'auto-mg',
+      '口播加特效',
+      '口播自动包装',
+      '根据内容加效果',
+      '自动添加MG',
+      'talking-head',
+      'lecture-packaging',
+    ]
+  },
+  {
     id: '11111111-1240-4000-8000-000000000014',
     slug: 'news-rough-cut',
     name: 'News Rough Cut',
