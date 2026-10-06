@@ -11,12 +11,25 @@ import { buildCaptionWordRuns } from './captionWordRuns';
 import { captionPageMotionStyle, captionWordMotionStyle } from './captionMotion';
 
 const CAPTION_OVERLAY_STYLE = { pointerEvents: 'none', zIndex: 1 } as const;
-const CAPTION_WORD_RUN_STYLE = {
+// Note: justifyContent is intentionally omitted here — it must be set
+// per-render based on the active preset's textAlign so the last (short)
+// run on a wrapped line aligns consistently with the rest of the block.
+// See captionWordRunStyle() below.
+const CAPTION_WORD_RUN_BASE_STYLE = {
   display: 'flex',
   flexWrap: 'wrap',
   alignItems: 'baseline',
   maxWidth: '100%',
 } as const;
+
+function captionWordRunStyle(preset: CaptionStyle): React.CSSProperties {
+  const align = preset.textAlign;
+  const justifyContent =
+    align === 'left' ? 'flex-start' :
+    align === 'right' ? 'flex-end' :
+    'center';
+  return { ...CAPTION_WORD_RUN_BASE_STYLE, justifyContent };
+}
 
 // Renders the active caption page for the current frame. Lives inside the
 // Remotion composition, so it shows in the Player preview AND burns into export.
@@ -111,10 +124,11 @@ function CaptionWordFlow({
   ms: number;
 }) {
   const runs = buildCaptionWordRuns(page.words, preset.displayMode === 'stacked');
+  const runStyle = captionWordRunStyle(preset);
   return (
     <div style={captionFlowStyle(preset)}>
       {runs.map((run) => (
-        <span key={run.words[0]?.id ?? run.startIndex} style={CAPTION_WORD_RUN_STYLE}>
+        <span key={run.words[0]?.id ?? run.startIndex} style={runStyle}>
           {run.words.map((word, runIndex) => {
             const index = run.startIndex + runIndex;
             return (
