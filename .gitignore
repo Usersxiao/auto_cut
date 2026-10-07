@@ -104,6 +104,9 @@ public/whisper-cli/
 .npm-cache/
 # Root-level local runtime files
 /etc/
+# Local auto-cut run artifacts: scratch renders, extracted frames, diagnostics and logs.
+# Several hundred MB of throwaway media; never belongs in the repository.
+/.occ-run/
 
 # Agent tooling local state (Command Code taste captures)
 .commandcode/
